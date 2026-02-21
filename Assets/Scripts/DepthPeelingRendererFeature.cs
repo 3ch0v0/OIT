@@ -26,6 +26,7 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
         
         RTHandle[] colorRT=new RTHandle[4];
         RTHandle[] depthRT=new RTHandle[2];
+        RTHandle peelDepthAttachment;
         RTHandle[] mrt=new RTHandle[2];
         RenderTargetIdentifier[] mrtid=new RenderTargetIdentifier[2];
         Shader initialShader;
@@ -55,26 +56,37 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
             mrt[1] = depthRT[0];
            
             
-            ConfigureTarget(mrt);
-            ConfigureClear(ClearFlag.Color,new Color(0.0f,0.0f,0.0f,0.0f));
+            ConfigureTarget(mrt,peelDepthAttachment);
+            ConfigureClear(ClearFlag.All,new Color(0.0f,0.0f,0.0f,0.0f));
         }
 
         //var filteringSettings = new FilteringSettings(RenderQueueRange.all, layerMask);
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
-            var desc= renderingData.cameraData.cameraTargetDescriptor;
-            desc.graphicsFormat = GraphicsFormat.R8G8B8A8_UNorm;
-            desc.depthBufferBits = 0;
-            desc.msaaSamples = 1;
-            desc.bindMS = false;
+            var colDesc= renderingData.cameraData.cameraTargetDescriptor;
+            colDesc.graphicsFormat = GraphicsFormat.R8G8B8A8_UNorm;
+            colDesc.depthBufferBits = 0;
+            colDesc.msaaSamples = 1;
+            colDesc.bindMS = false;
+            
+            var depthLayerDesc = colDesc;
+            depthLayerDesc.graphicsFormat = GraphicsFormat.R16_UNorm;
+            depthLayerDesc.depthBufferBits = 0;
+            
+            var peelDepthDesc = renderingData.cameraData.cameraTargetDescriptor;
+            peelDepthDesc.graphicsFormat = GraphicsFormat.None;
+            peelDepthDesc.depthBufferBits = 24;
+            peelDepthDesc.msaaSamples = 1;
+            peelDepthDesc.bindMS = false;
             
             //2 depthTex
             for (int i = 0; i < layers; i++)
             {
-                RenderingUtils.ReAllocateIfNeeded(ref colorRT[i], desc,name:"DepthPeelingColorTex"+i);
+                RenderingUtils.ReAllocateIfNeeded(ref colorRT[i], colDesc, name:"DepthPeelingColorTex"+i);
             }
-            RenderingUtils.ReAllocateIfNeeded(ref depthRT[0], desc,name:"DepthPeelingDepthTexture0");
-            RenderingUtils.ReAllocateIfNeeded(ref depthRT[1], desc,name: "DepthPeelingDepthTexture1");
+            RenderingUtils.ReAllocateIfNeeded(ref depthRT[0], depthLayerDesc, name:"DepthPeelingDepthTexture0");
+            RenderingUtils.ReAllocateIfNeeded(ref depthRT[1], depthLayerDesc, name: "DepthPeelingDepthTexture1");
+            RenderingUtils.ReAllocateIfNeeded(ref peelDepthAttachment, peelDepthDesc, name: "DepthPeelingDepthAttachment");
 
             //Configure(cmd, renderingData.cameraData.cameraTargetDescriptor);
             //Debug.Log(renderingData.cameraData.cameraTargetDescriptor.msaaSamples);
@@ -132,7 +144,7 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
                 
                 //CoreUtils.SetRenderTarget(cmdPeeling, mrtid[0]);
                 //CoreUtils.SetRenderTarget(cmdPeeling,mrtid,depthRT[1-i%2]);
-                cmdPeeling.SetRenderTarget(mrtid, BuiltinRenderTextureType.None);
+                cmdPeeling.SetRenderTarget(mrtid, peelDepthAttachment.nameID);
                 CoreUtils.ClearRenderTarget(cmdPeeling,ClearFlag.All, new Color(0.0f,0.0f,0.0f,0.0f));
                 
                 //peelingMat.SetTexture("_PrevDepthTex", depthRT[1 - i % 2]);//i=1,tex0; i=2,tex1; i=3,tex0
@@ -187,6 +199,7 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
             }
             depthRT[0]?.Release();
             depthRT[1]?.Release();
+            peelDepthAttachment?.Release();
             //mrt[0]?.Release();
             //mrt[1]?.Release();
           

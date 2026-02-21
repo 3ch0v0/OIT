@@ -20,11 +20,12 @@ Shader "OIT/DP_Initial"
             Tags { "LightMode" = "DP_Initial" }
             ZWrite on
             ZTest LEqual
-            Cull off
+            Cull back
             Blend 0 Off
             Blend 1 Off
             
             HLSLPROGRAM
+             #pragma target 3.5
             #pragma vertex vert
             #pragma fragment frag
 
@@ -52,7 +53,8 @@ Shader "OIT/DP_Initial"
             struct FragOutput
             {
                 float4 col : SV_Target0;    
-                float4 depth : SV_Target1; 
+                //float4 depth : SV_Target1;
+                float depth : SV_Target1;
             };
             
             sampler2D _MainTex;
@@ -89,10 +91,11 @@ Shader "OIT/DP_Initial"
                 float3 viewDirWS = GetWorldSpaceNormalizeViewDir(i.positionWS);
 
                 float3 finalColor= CalculateLighting( texColor.rgb, viewDirWS,  normalWS,  _Glossiness,  _SpecularColor);
-                float linearDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams); 
+                //float linearDepth= Linear01Depth(i.positionCS.z,_ZBufferParams);
+                float linearDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
                                 
-                o.depth=EncodeFloatRGBA(linearDepth);
-                
+                //o.depth=EncodeFloatRGBA(linearDepth);
+                o.depth=linearDepth;
                 o.col = float4(finalColor,alpha);
                 return o;
                                                                   
