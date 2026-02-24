@@ -64,7 +64,7 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
             var colDesc= renderingData.cameraData.cameraTargetDescriptor;
-            colDesc.graphicsFormat = GraphicsFormat.R8G8B8A8_UNorm;
+            colDesc.graphicsFormat = GraphicsFormat.R16G16B16A16_UNorm;
             colDesc.depthBufferBits = 0;
             colDesc.msaaSamples = 1;
             colDesc.bindMS = false;
@@ -108,13 +108,12 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
             var renderStateBlock = new RenderStateBlock(RenderStateMask.Raster);
             drawingSettings.overrideMaterial= initialMat;
 
-            using (new ProfilingScope(cmdInitial, new ProfilingSampler("DepthPeeling_Initialize")))
-            {
-                context.ExecuteCommandBuffer(cmdInitial);
-                cmdInitial.Clear();
-                context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
-            }    
-                        
+            cmdInitial.BeginSample("DepthPeeling_Initialize");
+            context.ExecuteCommandBuffer(cmdInitial);
+            cmdInitial.Clear();
+            context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
+               
+            cmdInitial.EndSample("DepthPeeling_Initialize");            
             //Blitter.BlitCameraTexture(cmd,colorRT[0], cameraTarget);
             
             context.ExecuteCommandBuffer(cmdInitial);
@@ -150,12 +149,15 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
                 //peelingMat.SetTexture("_PrevDepthTex", depthRT[1 - i % 2]);//i=1,tex0; i=2,tex1; i=3,tex0
                 cmdPeeling.SetGlobalTexture("_PrevDepthTex",depthRT[1-i%2]);
                 
-                using (new ProfilingScope(cmdPeeling, new ProfilingSampler("DepthPeeling_PeelingPass"+i)))
-                {
-                    context.ExecuteCommandBuffer(cmdPeeling);
-                    cmdPeeling.Clear();
-                    context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
-                }
+                
+                string sampleName = "DepthPeeling_PeelingPass" + i;
+                cmdPeeling.BeginSample(sampleName);
+                
+                context.ExecuteCommandBuffer(cmdPeeling);
+                cmdPeeling.Clear();
+                context.DrawRenderers(renderingData.cullResults, ref drawingSettings, ref filteringSettings);
+                
+                cmdPeeling.EndSample(sampleName);
                 
                 context.ExecuteCommandBuffer(cmdPeeling);
                 CommandBufferPool.Release(cmdPeeling);
@@ -164,23 +166,23 @@ public class DepthPeelingRendererFeature : ScriptableRendererFeature
             
             //-------------- blend Passe----------------------
             CommandBuffer cmdBlend = CommandBufferPool.Get("DepthPeelingPass_Blend");
-            using (new ProfilingScope(cmdBlend, new ProfilingSampler("DepthPeeling_Blending")))
-            {
-                context.ExecuteCommandBuffer(cmdBlend);
-                cmdBlend.Clear(); 
+            cmdBlend.BeginSample("DepthPeeling_BlendPass");
+            context.ExecuteCommandBuffer(cmdBlend);
+            cmdBlend.Clear(); 
                 // //Blitter.BlitCameraTexture(cmdBlend,sourceColorRT, depthRT[0]);
                 // cmdBlend.SetGlobalTexture("_LayerColorTex", colorRT[0]); 
                 // cmdBlend.SetGlobalTexture("_DPAccumTex", depthRT[0]);
                 // CoreUtils.SetRenderTarget(cmdBlend, sourceColorRT);
                 // cmdBlend.DrawProcedural(Matrix4x4.identity, blendMat, 0, MeshTopology.Triangles, 3, 1);
                 // //Blitter.BlitCameraTexture(cmdBlend, colorRT[3],sourceColorRT);
-                CoreUtils.SetRenderTarget(cmdBlend, sourceColorRT);
-                for (int i = 3; i >= 0; i--)
-                {
-                    cmdBlend.SetGlobalTexture("_LayerColorTex", colorRT[i]);
-                    cmdBlend.DrawProcedural(Matrix4x4.identity, blendMat, 0, MeshTopology.Triangles, 3, 1);
-                }
+            CoreUtils.SetRenderTarget(cmdBlend, sourceColorRT);
+            for (int i = 3; i >= 0; i--)
+            { 
+                cmdBlend.SetGlobalTexture("_LayerColorTex", colorRT[i]);
+                cmdBlend.DrawProcedural(Matrix4x4.identity, blendMat, 0, MeshTopology.Triangles, 3, 1);
             }
+            
+            cmdBlend.EndSample("DepthPeeling_BlendPass");
             
             context.ExecuteCommandBuffer(cmdBlend);
             CommandBufferPool.Release(cmdBlend);

@@ -91,8 +91,10 @@ Shader "OIT/DP_Initial"
                 float3 viewDirWS = GetWorldSpaceNormalizeViewDir(i.positionWS);
 
                 float3 finalColor= CalculateLighting( texColor.rgb, viewDirWS,  normalWS,  _Glossiness,  _SpecularColor);
-                //float linearDepth= Linear01Depth(i.positionCS.z,_ZBufferParams);
-                float linearDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
+                float linearDepth= Linear01Depth(i.positionCS.z,_ZBufferParams);
+                //float linearDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
+                //float linearDepth= LinearEyeDepth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
+                //float linearDepth=i.positionCS.z/i.positionCS.w; 
                                 
                 //o.depth=EncodeFloatRGBA(linearDepth);
                 o.depth=linearDepth;

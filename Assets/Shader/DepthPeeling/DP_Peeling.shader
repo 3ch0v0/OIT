@@ -95,10 +95,10 @@ Shader "OIT/DP_Peeling"
                 float3 finalColor= CalculateLighting( texColor.rgb, viewDirWS,  normalWS,  _Glossiness,  _SpecularColor);
 
                 
-                float currDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
-                //float currDepth= Linear01Depth(i.positionCS.z,_ZBufferParams);
+                //float currDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
+                float currDepth= Linear01Depth(i.positionCS.z,_ZBufferParams);
 
-                //float currDepth = i.positionCS.w * _ProjectionParams.w;
+                //float currDepth = i.positionCS.z * _ProjectionParams.w;
                 float2 ssUV = i.positionSS.xy/i.positionSS.w;
                 
                 //float prevDepth = DecodeFloatRGBA(SAMPLE_TEXTURE2D(_PrevDepthTex, sampler_PrevDepthTex, ssUV));
