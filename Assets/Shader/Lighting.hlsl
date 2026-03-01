@@ -17,7 +17,8 @@ float3 CalculateLighting(float3 texColor,float3 viewDirWS, float3 normalWS, floa
     float3 diffuse = NdotL * lightColor;
     //-specular
     float NdotH = max(0, dot(normalWS, halfDirWS));
-    float3 specular = lightColor * _SpecularColor.rgb * pow(NdotH, _Glossiness * 128.0);
+    float specPow = max(1.0, _Glossiness * 128.0);
+    float3 specular = lightColor * _SpecularColor.rgb * pow(NdotH, specPow);
 
     float3 finalColor = texColor.rgb * (ambient + diffuse) + specular;
     return finalColor;
