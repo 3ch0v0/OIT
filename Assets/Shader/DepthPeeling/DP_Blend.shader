@@ -10,11 +10,12 @@ Shader "OIT/DP_Blend"
 
         Pass
         {
-            //Name "DP_Blend"
             ZWrite Off
             ZTest Always
             Cull Off
-            Blend SrcAlpha OneMinusSrcAlpha
+            //color:Src * DstAlpha + Dst * 1
+            // Alpha：Src * 0 + Dst * (1 - SrcAlpha)
+            Blend DstAlpha One, zero OneMinusSrcAlpha
             ColorMask RGBA
             
             HLSLPROGRAM
@@ -39,18 +40,8 @@ Shader "OIT/DP_Blend"
                 float4 positionSS : TEXCOORD1;
             };
             
-            TEXTURE2D(_LayerColorTex); SAMPLER(sampler_LayerColorTex);
-            TEXTURE2D(_DPAccumTex); SAMPLER(sampler_DPAccumTex);
-            TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
-            
-            
-            CBUFFER_START(UnityperMaterial)
-            float _Alpha;
-            float4  _BaseColor;
-            float _Glossiness;
-            float4 _SpecularColor;
-            CBUFFER_END
-            
+            TEXTURE2D(_LayerColorTex);
+            SAMPLER(sampler_LayerColorTex);
             
             Varyings vert (Attributes i)
             {
@@ -62,17 +53,14 @@ Shader "OIT/DP_Blend"
                 return o;
             }
 
+
+            
             float4 frag (Varyings i): SV_Target
             {
-                float2 ssUV = i.positionSS.xy/i.positionSS.w;
                
-                float4 bgCol=SAMPLE_TEXTURE2D(_DPAccumTex,sampler_DPAccumTex, i.uv);
-                //float4 bgCol=SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex, ssUV);
                 float4 layerCol=SAMPLE_TEXTURE2D(_LayerColorTex,sampler_LayerColorTex, i.uv);
-                float4 premultLayerCol=float4(layerCol.rgb*layerCol.a,layerCol.a);
-               
-                
-                //return premultLayerCol+(1-premultLayerCol.a)*bgCol;
+                layerCol.rgb*=layerCol.a;
+                                
                 return layerCol;
                                                                   
                 

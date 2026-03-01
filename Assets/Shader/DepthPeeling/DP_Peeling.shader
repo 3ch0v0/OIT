@@ -19,9 +19,8 @@ Shader "OIT/DP_Peeling"
             Tags { "LightMode" = "DP_Peeling" }
             ZTest LEqual
             ZWrite On
-            Cull back
-            Blend 0 Off
-            Blend 1 Off
+            Cull Off
+            Blend Off
             
             HLSLPROGRAM
              #pragma target 3.5
@@ -48,13 +47,7 @@ Shader "OIT/DP_Peeling"
                 float3 normalWS : TEXCOORD2;
                 float4 positionSS : TEXCOORD3;
             };
-            
-            struct FragOutput
-            {
-                float4 col : SV_Target0;    
-                //float4 depth : SV_Target1;
-                float depth : SV_Target1;
-            };
+             
             
             sampler2D _MainTex;
             float4 _MainTex_ST;
@@ -82,10 +75,8 @@ Shader "OIT/DP_Peeling"
                 return o;
             }
 
-            FragOutput frag (Varyings i) 
+            float4 frag(Varyings i): SV_Target
             {
-                FragOutput o;
-                
                 float4 texColor = tex2D(_MainTex, i.uv)*_BaseColor;
                 float alpha = texColor.a * _Alpha;
 
@@ -93,37 +84,27 @@ Shader "OIT/DP_Peeling"
                 float3 viewDirWS = GetWorldSpaceNormalizeViewDir(i.positionWS);
 
                 float3 finalColor= CalculateLighting( texColor.rgb, viewDirWS,  normalWS,  _Glossiness,  _SpecularColor);
-
                 
-                //float currDepth= Linear01Depth(i.positionCS.z/i.positionCS.w,_ZBufferParams);
-                float currDepth= Linear01Depth(i.positionCS.z,_ZBufferParams);
-
-                //float currDepth = i.positionCS.z * _ProjectionParams.w;
+                float currDepth= i.positionCS.z;
+                
                 float2 ssUV = i.positionSS.xy/i.positionSS.w;
-                
-                //float prevDepth = DecodeFloatRGBA(SAMPLE_TEXTURE2D(_PrevDepthTex, sampler_PrevDepthTex, ssUV));
                 float prevDepth = SAMPLE_TEXTURE2D(_PrevDepthTex, sampler_PrevDepthTex, ssUV).r;
                 
-
-                //clip(currDepth-(prevDepth+0.000001));
-
-                // #if defined(UNITY_REVERSED_Z)
-                // if (currDepth >= prevDepth - 0.000001) 
-                // {
-                //     discard;
-                // }
-                // #endif
+                #if UNITY_REVERSED_Z
+                    if (currDepth >= prevDepth-0.00001) 
+                    {
+                        discard;
+                    }
+                #endif
                 
-                
-                 if (currDepth <= prevDepth+0.00005) 
+                #if (!UNITY_REVERSED_Z)
+                 if (currDepth <= prevDepth+0.00001) 
                  {
                      discard;
                  }
+                #endif
                 
-                //o.depth=EncodeFloatRGBA(currDepth);
-                o.depth=currDepth;
-                o.col = float4(finalColor,alpha);
-                return o;
+                return float4(finalColor,alpha);
                                                                   
                 
             }
