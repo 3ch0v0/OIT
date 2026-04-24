@@ -30,7 +30,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Alpha: 0.5
-    - _Glossiness: 0.5
+    - _Glossiness: 1
     m_Colors:
     - _BaseColor: {r: 0, g: 0.32941177, b: 1, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
